@@ -8,6 +8,12 @@ import requests
 from collections import defaultdict
 from django.conf import settings
 
+
+def remove_plus_sign(text):
+    if "+" in text:
+        text = text.replace("+", "")
+    return text
+
 class SmsCreateView(APIView):
     def post(self, request):
         serializer = SmsSerializer(data=request.data)
@@ -15,7 +21,9 @@ class SmsCreateView(APIView):
             phone = serializer.validated_data.get('phone')
             try:
                 phone_number = PhoneNumber.objects.get(phone=phone)
-                sms = Sms(phone_number=phone_number, phone_from=serializer.validated_data.get('phone_from'),
+                phone_from = serializer.validated_data.get('phone_from')
+                phone_from = remove_plus_sign(phone_from)
+                sms = Sms(phone_number=phone_number, phone_from=phone_from,
                           text=serializer.validated_data.get('text'))
                 sms.save()
                 '''response = send_sms_to_hub(text=sms.text, phone=int(phone), phone_from=sms.phone_from,
@@ -55,6 +63,8 @@ class NumberView(APIView):
                     activation_id = activation.id
                     phone = activation.phone_number.phone
                     status_response = "SUCCESS"
+                    return Response({"number": int(phone), "activationId": activation_id, "status": status_response},
+                                    status=201)
                 else:
                     status_response = "NO_NUMBERS"
                     return Response({"status": status_response},
@@ -105,7 +115,7 @@ class NumberView(APIView):
                     except Activation.DoesNotExist:
                         status_response = "ERROR"
                         return Response({"status": status_response, "error": "Активации не существует"})
-            return Response({"number": int(phone), "activationId": activation_id, "status": status_response}, status=201)
+
         else:
             return Response(serializer.errors, status=400)
 

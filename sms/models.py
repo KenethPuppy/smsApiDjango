@@ -17,18 +17,24 @@ class PhoneNumber(models.Model):
 
     def save(self, *args, **kwargs):
         if self.pk is None and self.services is None:
-            print(self.pk)
-            services_data = [
-                {"vk": True, "try": 4},
-                {"face": True, "try": 4},
-                {"tiktok": True, "try": 4}
-            ]
+            data = read_json_file('sms/data.json')
+            services_data = create_services_data(data)
+            print(services_data)
             self.services = json.dumps(services_data)
         super().save(*args, **kwargs)
 
     def __str__(self):
         return f"{self.phone}"
 
+
+def create_services_data(data_all_services,):
+    services_data = []
+    for service in data_all_services:
+        service_name = service['name']
+        service_data = {service_name: True, "try": 4}
+        services_data.append(service_data)
+    print(services_data)
+    return services_data
 
 class Activation(models.Model):
     phone_number = models.ForeignKey(PhoneNumber, on_delete=models.CASCADE, verbose_name="Номер телефона")
@@ -53,6 +59,11 @@ class Sms(models.Model):
     sended = models.BooleanField(default=False, verbose_name="Принято")
 
 
+
+def read_json_file(file_path):
+    with open(file_path, 'r', encoding='utf-8') as json_file:
+        data = json.load(json_file)
+    return data
 
 
 '''def save(self, *args, **kwargs):

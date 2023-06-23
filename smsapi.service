@@ -1,0 +1,15 @@
+[Unit]
+Description=smsapi
+After=network.target
+
+[Service]
+User=root
+Group=root
+Type=simple
+WorkingDirectory=/root/sms/smsApiDjango
+ExecStart=/root/sms/smsApiDjango/smsenv/bin/python /root/sms/smsApiDjango/manage.py runserver 37.220.83.220:8080
+RestartSec=60s
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
