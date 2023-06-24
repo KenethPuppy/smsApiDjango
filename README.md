@@ -1,13 +1,6 @@
 # smsApiDjango
 
-# [Logging in to SMS Admin Account](https://app.tango.us/app/workflow/5fc5fdaa-51e5-4897-b3e1-f3d7bbdd31f5?utm_source=markdown&utm_medium=markdown&utm_campaign=workflow%20export%20links)
-
-__Creation Date:__ June 24, 2023  
-__Created By:__ Keneth Puppy  
-[View most recent version on Tango.us](https://app.tango.us/app/workflow/5fc5fdaa-51e5-4897-b3e1-f3d7bbdd31f5?utm_source=markdown&utm_medium=markdown&utm_campaign=workflow%20export%20links)
-
-
-
+# [Logging in to SMS Admin Account]
 ***
 
 
