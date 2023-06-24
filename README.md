@@ -1,6 +1,6 @@
 # smsApiDjango
 
-# [Logging in to SMS Admin Account]
+# Logging in to SMS Admin Account
 ***
 
 
