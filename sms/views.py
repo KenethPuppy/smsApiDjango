@@ -1,5 +1,7 @@
 import json
 import time
+from django.db import transaction
+from threading import Lock
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from .models import Sms, PhoneNumber, Activation
@@ -8,10 +10,16 @@ import requests
 from collections import defaultdict
 from django.conf import settings
 
+number_lock = Lock()
 
-def remove_plus_sign(text):
+
+def clean_text(text):
     if "+" in text:
         text = text.replace("+", "")
+    if ' ' in text:
+        text = text.replace(' ', '')
+    if '-' in text:
+        text = text.replace('-', '')
     return text
 
 class SmsCreateView(APIView):
@@ -22,7 +30,6 @@ class SmsCreateView(APIView):
             try:
                 phone_number = PhoneNumber.objects.get(phone=phone)
                 phone_from = serializer.validated_data.get('phone_from')
-                phone_from = remove_plus_sign(phone_from)
                 sms = Sms(phone_number=phone_number, phone_from=phone_from,
                           text=serializer.validated_data.get('text'))
                 sms.save()
@@ -58,17 +65,20 @@ class NumberView(APIView):
             status_response = ''
             action = serializer.validated_data.get('action')
             if action == 'GET_NUMBER':
-                activation = start_activation(serializer)
-                if activation:
-                    activation_id = activation.id
-                    phone = activation.phone_number.phone
-                    status_response = "SUCCESS"
-                    return Response({"number": int(phone), "activationId": activation_id, "status": status_response},
-                                    status=201)
-                else:
-                    status_response = "NO_NUMBERS"
-                    return Response({"status": status_response},
-                                    status=201)
+                with transaction.atomic():
+                    number_lock.acquire()
+                    activation = start_activation(serializer)
+                    if activation:
+                        activation_id = activation.id
+                        phone = activation.phone_number.phone
+                        status_response = "SUCCESS"
+                        number_lock.release()
+                        return Response({"number": int(phone), "activationId": activation_id, "status": status_response},
+                                        status=201)
+                    else:
+                        status_response = "NO_NUMBERS"
+                        return Response({"status": status_response},
+                                        status=201)
             elif action == 'GET_SERVICES':
                 all_numbers = get_all_numbers()
                 status_response = "SUCCESS"
@@ -99,11 +109,14 @@ class NumberView(APIView):
                             phone_number = activation.phone_number
                             services = json.loads(phone_number.services)
                             for service_data in services:
+                                print("ass")
+                                print(service_data)
                                 if activation.service in service_data:
-                                    if service_data["try"] > 0:
+                                    print("hey!")
+                                    if service_data["try"] > 1:
                                         service_data[activation.service] = True
                                         service_data["try"] -= 1
-                                break
+                                    break
                             phone_number.services = json.dumps(services)
                             phone_number.save()
 
@@ -145,7 +158,7 @@ def get_all_numbers():
     country_list = []
     for country, operator_map in country_operator_map.items():
         country_entry = {
-            'country': country,
+            'country': country.lower(),
             'operatorMap': {}
         }
 
@@ -154,7 +167,7 @@ def get_all_numbers():
                 service: count
                 for service, count in service_map.items()
             }
-
+            operator = operator.lower()
             operator_entry = {
                 operator: service_counts
             }
@@ -181,6 +194,10 @@ def send_sms_to_hub(text, phone, phone_from, sms_id):
     response = requests.post(url, data=data)
     return response
 
+def check_exception(phone_number, exception_phone_set):
+    for exception_number in exception_phone_set:
+        if exception_number in str(phone_number.phone):
+            return True
 
 def start_activation(serializer):
     operator = serializer.validated_data.get('operator')
@@ -191,7 +208,7 @@ def start_activation(serializer):
     phone_numbers = PhoneNumber.objects.filter(operator=operator, country=country)
 
     for phone_number in phone_numbers:
-        if phone_number.phone in exception_phone_set:
+        if check_exception(phone_number, exception_phone_set):
             continue
         services = phone_number.services
         if services:

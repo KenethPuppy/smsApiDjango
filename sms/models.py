@@ -16,6 +16,8 @@ class PhoneNumber(models.Model):
     services = models.JSONField(default=None)
 
     def save(self, *args, **kwargs):
+        self.operator = self.operator.lower()
+        self.country = self.country.lower()
         if self.pk is None and self.services is None:
             data = read_json_file('sms/data.json')
             services_data = create_services_data(data)
@@ -30,8 +32,8 @@ class PhoneNumber(models.Model):
 def create_services_data(data_all_services,):
     services_data = []
     for service in data_all_services:
-        service_name = service['name']
-        service_data = {service_name: True, "try": 4}
+        service_id = service['id']
+        service_data = {service_id: True, "try": 4}
         services_data.append(service_data)
     print(services_data)
     return services_data

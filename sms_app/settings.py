@@ -42,6 +42,7 @@ INSTALLED_APPS = [
     'sms',
     'rest_framework',
     'drf_yasg',
+    'rosetta',
 ]
 
 MIDDLEWARE = [
